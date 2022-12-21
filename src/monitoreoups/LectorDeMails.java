@@ -1,33 +1,26 @@
 package monitoreoups;
 
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.*;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.mail.Folder;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Multipart;
-import javax.mail.NoSuchProviderException;
-import javax.mail.Part;
-import javax.mail.Session;
-import javax.mail.Store;
+import javax.mail.*;
 
 /**
  *
  * @author Nazareno Lorenzatti
- * @version 1.1
- * nl.loragro@gmail.com
- * 
+ * @version 1.1 nl.loragro@gmail.com
+ *
  */
-
 // Clase para la leectura de los mails enviados por las UPS al momento de registrar algun evento.
 public class LectorDeMails {
 
     private static String alertaMensaje;
     private static String token;
+    private static String remitente;
+    private static String asunto;
+    private static int retorno;
 
     public LectorDeMails() {
 
@@ -35,7 +28,7 @@ public class LectorDeMails {
 
     public void leerMails() {
         try {
-//                    JOptionPane.showMessageDialog(null, "ejecutando");
+            System.out.println("Ejecutando lector");
             Properties prop = new Properties();
 
             // Deshabilitamos TLS
@@ -50,6 +43,7 @@ public class LectorDeMails {
             prop.setProperty("mail.pop3.socketFactory.port", "995");
 
             Session sesion = Session.getInstance(prop);
+//            sesion.setDebug(true);
 
             try {
 
@@ -64,15 +58,21 @@ public class LectorDeMails {
                 Message[] mensajes = folder.getMessages();
 
                 for (int i = 0; i < mensajes.length; i++) {
-                    String remitente = mensajes[i].getFrom()[0].toString();
-                    String asunto = mensajes[i].getSubject();
-                    analizaParteDeMensaje(mensajes[i]);
+                    int ret = 0;
+                    this.remitente = mensajes[i].getFrom()[0].toString();
+                    this.asunto = mensajes[i].getSubject();
 
-                    int ret = enviarMensaje(alertaMensaje);
+                    if (this.remitente.contains("ups-notificaciones@ultra.net.ar") || this.remitente.contains("nl.loragro@gmail.com")) {
+                        analizaParteDeMensajeUPS(mensajes[i]);
+                        ret = enviarMensaje(this.alertaMensaje);
+                    } else if (this.remitente.contains("catchall@vangrow.ar") || this.remitente.contains("alertas.ups.ultrafibra@gmail.com")) {
+                        analizaParteDeMensajeOLT(mensajes[i]);
+                        ret = enviarMensaje(this.alertaMensaje);
+                    }
 
                     if (ret == 401) {
                         nuevoToken();
-                        i = 0; // reinicio i para que no se pierda el mensaje que ya paso
+                        i--; // reinicio i para que no se pierda el mensaje que ya paso
                     }
                     Thread.sleep(5000);
 
@@ -93,12 +93,12 @@ public class LectorDeMails {
 
         } catch (MessagingException ex) {
             Logger.getLogger(LectorDeMails.class.getName()).log(Level.SEVERE, null, ex);
-            System.out.println("Error al establecer la conexio y/o obtener la carpeta de correos");
+            System.out.println("Error al establecer la conexion y/o obtener la carpeta de correos");
         }
     }
 
     //ANALIZAR EL MAIL PARA OBTENER LA INFORMACION DE LA ALERTA
-    private static void analizaParteDeMensaje(Part unaParte) {
+    private static void analizaParteDeMensajeUPS(Part unaParte) {
 
         try {
             // Si es multiparte, se analiza cada una de sus partes recursivamente, Obteniendo el mensaje solamente. 
@@ -112,7 +112,7 @@ public class LectorDeMails {
                         alertaMensaje = (String) bodyPart.getContent();
                         break;
                     }
-                    analizaParteDeMensaje(multi.getBodyPart(j));
+                    analizaParteDeMensajeUPS(multi.getBodyPart(j));
                 }
             }
             // si es un texto simple se guarda directamente el mensaje
@@ -127,18 +127,62 @@ public class LectorDeMails {
 
     }
 
-    // LLAMADAS A LA API DE TELEPROM PARA EL ENVIO DE SMS
-    //REALIZAR EL ENVIO DEL MENSAJE
+    private static void analizaParteDeMensajeOLT(Part unaParte) {
+
+        try {
+            // Si es multiparte, se analiza cada una de sus partes recursivamente, Obteniendo el mensaje solamente. 
+            if (unaParte.isMimeType("multipart/*")) {
+                Multipart multi;
+                multi = (Multipart) unaParte.getContent();
+
+                for (int j = 0; j < multi.getCount(); j++) {
+                    Part bodyPart = multi.getBodyPart(j);
+                    if (bodyPart.isMimeType("text/*")) {
+                        alertaMensaje = (String) bodyPart.getContent();
+                        alertaMensaje = alertaMensaje.substring(14480, 14547);
+                        alertaMensaje = alertaMensaje.replaceAll("</p>", "");
+                        alertaMensaje = alertaMensaje.replaceAll("</td>", "").replaceAll("<", "").replaceAll(">", "");
+                        alertaMensaje = alertaMensaje.replaceAll("left", "").replace("align", "").replace("=", "").replace("lign","");
+                        alertaMensaje = alertaMensaje.replaceAll("\"","");
+                        alertaMensaje = alertaMensaje.trim();
+                        alertaMensaje = asunto + ">>>>" + alertaMensaje;
+                        break;
+                    }
+                    analizaParteDeMensajeOLT(multi.getBodyPart(j));
+                }
+            }
+            // si es un texto simple se guarda directamente el mensaje
+            if (unaParte.isMimeType("text/*")) {
+                alertaMensaje = (String) unaParte.getContent();
+                alertaMensaje = alertaMensaje.substring(14480, 14547);
+                alertaMensaje = alertaMensaje.replaceAll("</p>", "");
+                alertaMensaje = alertaMensaje.replaceAll("</td>", "").replaceAll("<", "").replaceAll(">", "");
+                alertaMensaje = alertaMensaje.replaceAll("left", "").replace("align", "").replace("=", "").replace("lign","");
+                alertaMensaje = alertaMensaje.replaceAll("\"","");
+                alertaMensaje = alertaMensaje.trim();                
+                alertaMensaje = asunto + ">>>>" + alertaMensaje;
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error al leer el correo");
+        }
+
+    }
+
     public static int enviarMensaje(String alerta) {
         int ret = 0;
         try {
             Unirest.setTimeouts(0, 0);
             HttpResponse<String> response = Unirest.post("https://mayten.cloud/api/Mensajes/Texto")
-                    .header("Authorization", "Bearer " + token + "")
+                    .header("Authorization", "Bearer " + token)
                     .header("Content-Type", "application/json")
-                    .body("{\r\n\"origen\":\"SMS_CORTO\",\r\n\"mensajes\":[\r\n{\r\n \"mensaje\":\""+alerta+"\",\r\n\"telefono\": \"3466404290\",\r\n\"identificador\":\"\"\r\n}")
+                    .body("{\r\n    \"origen\": \"SMS_CORTO\",\r\n    \"mensajes\": [\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3466404290\", \r\n            \"identificador\": \"\"\r\n        },\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476620618\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476324986\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476352124\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476590801\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476523405\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476611764\", \r\n            \"identificador\": \"\"\r\n        }\r\n    ]\r\n}")
                     .asString();
             ret = response.getStatus();
+            System.out.println("retorno = " + ret);
+            retorno = ret;
         } catch (UnirestException ex) {
             Logger.getLogger(LectorDeMails.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -151,7 +195,7 @@ public class LectorDeMails {
             Unirest.setTimeouts(0, 0);
             HttpResponse<String> response = Unirest.post("http://mayten.cloud/auth")
                     .header("Content-Type", "application/json")
-                    .body("{\r\n\t\"username\": \"megalink\",\r\n\t\"password\": \"*******\"\r\n}")
+                    .body("{\r\n\t\"username\": \"megalink\",\r\n\t\"password\": \"megalink123\"\r\n}")
                     .asString();
             // Leo el body de la llamda donde esta el token
             String body = response.getBody();
@@ -163,6 +207,9 @@ public class LectorDeMails {
         }
 
     }
-    
+
+    public static int getRetorno() {
+        return retorno;
+    }
 
 }
