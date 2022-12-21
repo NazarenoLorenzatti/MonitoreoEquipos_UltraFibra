@@ -50,7 +50,7 @@ public class LectorDeMails {
                 System.out.println("PROGRAMA EN EJECUCION");
 
                 Store store = sesion.getStore("pop3");
-                store.connect("pop.gmail.com", "alertas.ups.ultrafibra@gmail.com", "spgsodpzqyxfqjxh");
+                store.connect("pop.gmail.com", "alertas.ups.ultrafibra@gmail.com", "*********");
 
                 Folder folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_ONLY);
@@ -178,7 +178,7 @@ public class LectorDeMails {
             HttpResponse<String> response = Unirest.post("https://mayten.cloud/api/Mensajes/Texto")
                     .header("Authorization", "Bearer " + token)
                     .header("Content-Type", "application/json")
-                    .body("{\r\n    \"origen\": \"SMS_CORTO\",\r\n    \"mensajes\": [\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3466404290\", \r\n            \"identificador\": \"\"\r\n        },\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476620618\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476324986\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476352124\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476590801\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476523405\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"3476611764\", \r\n            \"identificador\": \"\"\r\n        }\r\n    ]\r\n}")
+                    .body("{\r\n    \"origen\": \"SMS_CORTO\",\r\n    \"mensajes\": [\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"**********\", \r\n            \"identificador\": \"\"\r\n        },\r\n        {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"*********\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"*********\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"********\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"********\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"********\", \r\n            \"identificador\": \"\"\r\n        },\r\n                {\r\n            \"mensaje\": \"" + alerta + "\",\r\n            \"telefono\": \"**********\", \r\n            \"identificador\": \"\"\r\n        }\r\n    ]\r\n}")
                     .asString();
             ret = response.getStatus();
             System.out.println("retorno = " + ret);
@@ -195,7 +195,7 @@ public class LectorDeMails {
             Unirest.setTimeouts(0, 0);
             HttpResponse<String> response = Unirest.post("http://mayten.cloud/auth")
                     .header("Content-Type", "application/json")
-                    .body("{\r\n\t\"username\": \"megalink\",\r\n\t\"password\": \"megalink123\"\r\n}")
+                    .body("{\r\n\t\"username\": \"*********\",\r\n\t\"password\": \"*********\"\r\n}")
                     .asString();
             // Leo el body de la llamda donde esta el token
             String body = response.getBody();
